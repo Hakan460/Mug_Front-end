@@ -11,7 +11,7 @@
  */
 
 import { useEffect } from 'react';
-import { StatusBar } from 'react-native';
+import { StatusBar, View, ActivityIndicator } from 'react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 
@@ -21,11 +21,12 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
  * Giriş yapılmışsa → role göre /(customer) veya /(owner)
  */
 function AuthGate() {
-  const { isLoggedIn, userRole } = useAuth();
+  const { isLoggedIn, userRole, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
+    if (isLoading) return;
     // Mevcut sayfanın grubunu kontrol et
     const inAuthScreen = segments[0] === 'login';
     const inCustomerGroup = segments[0] === '(customer)';
@@ -53,7 +54,15 @@ function AuthGate() {
         router.replace('/(customer)/(home)' as any);
       }
     }
-  }, [isLoggedIn, userRole, segments]);
+  }, [isLoggedIn, userRole, segments, isLoading]);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#D4AF37" />
+      </View>
+    );
+  }
 
   return (
     <>

@@ -62,6 +62,20 @@ export default function OwnerTabLayout() {
           ),
         }}
       />
+
+      {/* ───── Gizli Paneller (Tab barda gözükmez) ───── */}
+      <Tabs.Screen
+        name="business-settings"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="services-settings"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="staff-settings"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }

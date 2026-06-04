@@ -114,7 +114,7 @@ export default function MyAppointmentsScreen() {
                 <View style={styles.ticketTop}>
                   <View>
                     <Text style={styles.serviceName}>
-                      {item.serviceName || 'Bilinmeyen Hizmet'}
+                      {item.service?.name || 'Bilinmeyen Hizmet'}
                     </Text>
                     <Text style={styles.statusText}>
                       Durum: {item.status || 'Onaylandı'}

@@ -25,29 +25,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Colors } from '@/constants/theme';
-import { getAppointments, createAppointment, Appointment } from '@/services/api';
+import { getAppointments, createAppointment, Appointment, getStaff, getBusinessAppointments } from '@/services/api';
 
-// Sahte uzman personel verileri — backend hazır olunca API'den gelecek
-const MOCK_STAFF = [
-  {
-    id: 'staff_1',
-    name: 'Emirhan Kılıç',
-    title: 'Master Barber',
-    avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-  },
-  {
-    id: 'staff_2',
-    name: 'Hakan Yılmaz',
-    title: 'Saç Tasarım',
-    avatar: 'https://randomuser.me/api/portraits/men/43.jpg',
-  },
-  {
-    id: 'staff_3',
-    name: 'Fark Etmez',
-    title: 'En Uygun Uzman',
-    avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
-  },
-];
+// MOCK_STAFF kaldırıldı, backendden çekilecek
 
 export default function BookingScreen() {
   const router = useRouter();
@@ -58,6 +38,7 @@ export default function BookingScreen() {
     servicePrice: string;
     serviceDuration: string;
     businessName: string;
+    businessId: string;
   }>();
 
   const service = {
@@ -68,35 +49,62 @@ export default function BookingScreen() {
     duration: Number(params.serviceDuration),
   };
   const businessName = params.businessName || 'Salon VIP';
+  const businessId = params.businessId;
 
-  const [selectedStaff, setSelectedStaff] = useState('');
-  const [selectedDate, setSelectedDate] = useState('Bugün');
+  const [staffList, setStaffList] = useState<any[]>([]);
+  const [selectedStaff, setSelectedStaff] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState('2026-06-05'); // Dummy next day Date format
   const [selectedTime, setSelectedTime] = useState('');
   const [bookedAppointments, setBookedAppointments] = useState<Appointment[]>([]);
+  const [myOwnAppointments, setMyOwnAppointments] = useState<Appointment[]>([]);
 
-  const dates = ['Bugün', 'Yarın', '12 Mayıs', '13 Mayıs', '14 Mayıs'];
+  // Format the dates better for the UI & Backend 
+  // For backend 'YYYY-MM-DD', for UI 'DD MMM'
+  const dates = ['2026-06-05', '2026-06-06', '2026-06-07', '2026-06-08', '2026-06-09'];
+  const displayDates: Record<string, string> = {
+    '2026-06-05': 'Bugün',
+    '2026-06-06': 'Yarın',
+    '2026-06-07': '7 Haz',
+    '2026-06-08': '8 Haz',
+    '2026-06-09': '9 Haz',
+  };
   const times = ['09:00', '10:00', '11:30', '14:00', '15:30', '17:00', '18:30'];
 
-  // Ekran odaklandığında randevuları çek
   useFocusEffect(
     useCallback(() => {
+      // Müşterinin kendi randevularını çek (Müşteri çakışmasını engellemek için)
       getAppointments()
-        .then((data) => setBookedAppointments(data))
-        .catch((err) => console.error('Randevular çekilemedi:', err));
-    }, [])
+        .then((data) => setMyOwnAppointments(data))
+        .catch((err) => console.error('Kendi randevularım çekilemedi:', err));
+
+      if (businessId) {
+        getBusinessAppointments(Number(businessId))
+          .then((data) => setBookedAppointments(data))
+          .catch((err) => console.error('İşletme randevuları çekilemedi:', err));
+
+        getStaff(Number(businessId))
+          .then(data => setStaffList(data))
+          .catch(err => console.error('Personel çekilemedi:', err));
+      }
+    }, [businessId])
   );
 
-  // Seçili tarih için dolu saatleri filtrele
-  const takenTimesForSelectedDate = bookedAppointments
+  // Seçili tarih ve personel için dolu saatleri filtrele (İşletme çakışması)
+  const takenTimesByStaff = bookedAppointments
+    .filter((app) => app.bookingDate === selectedDate && app.staffId === selectedStaff)
+    .map((app) => app.bookingTime);
+
+  // Müşterinin kendi dolu olduğu saatler (Müşteri çakışması)
+  const myBusyTimes = myOwnAppointments
     .filter((app) => app.bookingDate === selectedDate)
     .map((app) => app.bookingTime);
 
   // Tarih değiştiğinde dolu saat seçiliyse sıfırla
   useEffect(() => {
-    if (takenTimesForSelectedDate.includes(selectedTime)) {
+    if (takenTimesByStaff.includes(selectedTime) || myBusyTimes.includes(selectedTime)) {
       setSelectedTime('');
     }
-  }, [selectedDate, bookedAppointments]);
+  }, [selectedDate, bookedAppointments, myOwnAppointments]);
 
   const handleBooking = () => {
     if (!selectedStaff) {
@@ -115,7 +123,7 @@ export default function BookingScreen() {
       staffId: selectedStaff,
     })
       .then(() => {
-        const staffName = MOCK_STAFF.find((s) => s.id === selectedStaff)?.name;
+        const staffName = staffList.find((s) => s.id === selectedStaff)?.name;
         Alert.alert(
           'Randevu Onaylandı! 🎉',
           `${businessName} - ${staffName} ile ${service.name} için randevunuz oluşturuldu.`,
@@ -127,9 +135,9 @@ export default function BookingScreen() {
           ]
         );
       })
-      .catch((error) => {
-        Alert.alert('Dolu!', 'Bu saat az önce başkası tarafından alındı.');
-        console.error('Hata:', error);
+      .catch((error: any) => {
+        const msg = error.message || 'Bu saat az önce başkası tarafından alındı veya bir sorun oluştu.';
+        Alert.alert('Hata!', msg);
       });
   };
 
@@ -167,7 +175,7 @@ export default function BookingScreen() {
       {/* ───── Uzman Seçimi ───── */}
       <Text style={styles.sectionTitle}>Uzman Seçin</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.staffScroll}>
-        {MOCK_STAFF.map((staff) => (
+        {staffList.map((staff) => (
           <TouchableOpacity
             key={staff.id}
             style={[styles.staffCard, selectedStaff === staff.id && styles.selectedStaffCard]}
@@ -177,7 +185,7 @@ export default function BookingScreen() {
             }}
             activeOpacity={0.7}
           >
-            <Image source={{ uri: staff.avatar }} style={styles.staffAvatar} />
+            <Image source={{ uri: staff.avatarUrl || 'https://via.placeholder.com/150' }} style={styles.staffAvatar} />
             <Text style={[styles.staffName, selectedStaff === staff.id && styles.selectedStaffText]}>
               {staff.name}
             </Text>
@@ -204,7 +212,7 @@ export default function BookingScreen() {
             }}
           >
             <Text style={[styles.dateText, selectedDate === date && styles.selectedDateText]}>
-              {date}
+              {displayDates[date]}
             </Text>
           </TouchableOpacity>
         ))}
@@ -217,7 +225,9 @@ export default function BookingScreen() {
         pointerEvents={selectedStaff ? 'auto' : 'none'}
       >
         {times.map((time, index) => {
-          const isBooked = takenTimesForSelectedDate.includes(time);
+          const isStaffBooked = takenTimesByStaff.includes(time);
+          const isMeBooked = myBusyTimes.includes(time);
+          const isBooked = isStaffBooked || isMeBooked;
           const isSelected = selectedTime === time && !isBooked;
 
           return (
@@ -239,6 +249,7 @@ export default function BookingScreen() {
                 ]}
               >
                 {time}
+                {isMeBooked && <Text style={{ fontSize: 10, color: '#e74c3c' }}> (Dolu)</Text>}
               </Text>
             </TouchableOpacity>
           );

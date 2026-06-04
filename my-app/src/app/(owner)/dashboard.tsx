@@ -25,7 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import {
-  getAppointments,
+  getAllAppointments,
   deleteAppointment as deleteAppointmentApi,
   Appointment,
 } from '@/services/api';
@@ -39,7 +39,7 @@ export default function AdminDashboardScreen() {
 
   const fetchAppointments = useCallback(() => {
     setLoading(true);
-    getAppointments()
+    getAllAppointments()
       .then((data) => {
         setAppointments(data);
         setLoading(false);
@@ -58,7 +58,7 @@ export default function AdminDashboardScreen() {
 
   const totalAppointments = appointments.length;
   const expectedRevenue = appointments.reduce(
-    (sum, app) => sum + Number(app.servicePrice || 0),
+    (sum, app) => sum + Number(app.service?.price || app.servicePrice || 0),
     0
   );
 
@@ -151,11 +151,14 @@ export default function AdminDashboardScreen() {
                       </Text>
                     </View>
                     <View>
+                      <Text style={styles.customerName}>
+                        👤 {item.user?.name || 'Bilinmeyen Müşteri'}
+                      </Text>
                       <Text style={styles.serviceName}>
-                        {item.serviceName || 'Silinmiş Hizmet'}
+                        ✂️ {item.service?.name || item.serviceName || 'Silinmiş Hizmet'}
                       </Text>
                       <Text style={styles.priceText}>
-                        Ücret: {item.servicePrice || 0} TL
+                        Ücret: {item.service?.price || item.servicePrice || 0} TL
                       </Text>
                     </View>
                   </View>
@@ -240,7 +243,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   timeText: { color: Colors.primary, fontWeight: 'bold', fontSize: 13 },
-  serviceName: { fontSize: 18, fontWeight: 'bold', color: Colors.text, marginBottom: 4 },
+  customerName: { fontSize: 16, fontWeight: 'bold', color: Colors.text, marginBottom: 2 },
+  serviceName: { fontSize: 14, color: '#CCCCCC', marginBottom: 4 },
   priceText: { fontSize: 14, color: Colors.success, fontWeight: '600' },
 
   deleteBtn: {

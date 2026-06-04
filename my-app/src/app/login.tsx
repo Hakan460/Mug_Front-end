@@ -20,6 +20,8 @@ import {
   ImageBackground,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, UserRole } from '@/context/AuthContext';
@@ -29,12 +31,39 @@ const BG_IMAGE_URL =
   'https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?q=80&w=2111&auto=format&fit=crop';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login, register } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [role, setRole] = useState<UserRole>('CUSTOMER');
+  
+  const [email, setEmail] = useState('customer@mug.com');
+  const [password, setPassword] = useState('customer123');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleAuth = () => {
-    login(role);
+  const handleAuth = async () => {
+    if (!email || !password) {
+      Alert.alert('Hata', 'E-posta ve şifre zorunludur.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (isLogin) {
+        await login({ email, password });
+      } else {
+        if (!name) {
+          Alert.alert('Hata', 'Ad soyad zorunludur.');
+          setLoading(false);
+          return;
+        }
+        await register({ name, email, password, phone, role });
+      }
+    } catch (error: any) {
+      Alert.alert('Hata', error.message || 'Bir hata oluştu.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -106,6 +135,33 @@ export default function LoginScreen() {
               </View>
             )}
 
+            {/* Kayıt için ekstra alanlar */}
+            {!isLogin && (
+              <>
+                <View style={styles.inputGroup}>
+                  <Ionicons name="person-outline" size={20} color="#AAAAAA" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Adınız Soyadınız"
+                    placeholderTextColor="#777"
+                    value={name}
+                    onChangeText={setName}
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Ionicons name="call-outline" size={20} color="#AAAAAA" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Telefon Numaranız"
+                    placeholderTextColor="#777"
+                    keyboardType="phone-pad"
+                    value={phone}
+                    onChangeText={setPhone}
+                  />
+                </View>
+              </>
+            )}
+
             {/* E-posta alanı */}
             <View style={styles.inputGroup}>
               <Ionicons
@@ -120,6 +176,8 @@ export default function LoginScreen() {
                 placeholderTextColor="#777"
                 keyboardType="email-address"
                 autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
               />
             </View>
 
@@ -136,6 +194,8 @@ export default function LoginScreen() {
                 placeholder="Şifreniz"
                 placeholderTextColor="#777"
                 secureTextEntry
+                value={password}
+                onChangeText={setPassword}
               />
             </View>
 
@@ -144,10 +204,15 @@ export default function LoginScreen() {
               style={styles.submitBtn}
               onPress={handleAuth}
               activeOpacity={0.8}
+              disabled={loading}
             >
-              <Text style={styles.submitBtnText}>
-                {isLogin ? 'Giriş Yap' : 'Kayıt Ol ve Başlat'}
-              </Text>
+              {loading ? (
+                <ActivityIndicator color={Colors.background} />
+              ) : (
+                <Text style={styles.submitBtnText}>
+                  {isLogin ? 'Giriş Yap' : 'Kayıt Ol ve Başlat'}
+                </Text>
+              )}
             </TouchableOpacity>
 
             {/* Geçiş linki */}

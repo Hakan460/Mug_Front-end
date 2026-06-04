@@ -18,7 +18,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { Colors } from '@/constants/theme';
-import { getAppointments, deleteAppointment, Appointment } from '@/services/api';
+import { getAllAppointments, deleteAppointment, Appointment } from '@/services/api';
 
 const BG_IMAGE_URL =
   'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?q=80&w=2074&auto=format&fit=crop';
@@ -29,7 +29,7 @@ export default function OwnerAppointmentsScreen() {
 
   const fetchAppointments = useCallback(() => {
     setLoading(true);
-    getAppointments()
+    getAllAppointments()
       .then((data) => {
         setAppointments(data);
         setLoading(false);
@@ -100,8 +100,11 @@ export default function OwnerAppointmentsScreen() {
               <View style={styles.ticketCard}>
                 <View style={styles.ticketTop}>
                   <View>
+                    <Text style={styles.customerName}>
+                      👤 {item.user?.name || 'Bilinmeyen Müşteri'}
+                    </Text>
                     <Text style={styles.serviceName}>
-                      {item.serviceName || 'Bilinmeyen Hizmet'}
+                      {item.service?.name || item.serviceName || 'Bilinmeyen Hizmet'}
                     </Text>
                     <Text style={styles.statusText}>
                       {item.bookingDate} — {item.bookingTime}
@@ -120,7 +123,7 @@ export default function OwnerAppointmentsScreen() {
 
                 <View style={styles.ticketBottom}>
                   <Text style={styles.priceText}>
-                    {item.servicePrice || 0} TL
+                    {item.service?.price || item.servicePrice || 0} TL
                   </Text>
                   <TouchableOpacity
                     style={styles.cancelBtn}
@@ -167,7 +170,8 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 10,
   },
-  serviceName: { fontSize: 22, fontWeight: 'bold', color: Colors.text, marginBottom: 5 },
+  customerName: { fontSize: 18, fontWeight: 'bold', color: Colors.text, marginBottom: 4 },
+  serviceName: { fontSize: 16, color: '#CCCCCC', marginBottom: 5 },
   statusText: { fontSize: 14, color: Colors.primary, fontWeight: '600' },
   iconContainer: {
     width: 50,
